@@ -101,4 +101,18 @@ Body* createBody(float posX,float posY,float velX,float velY,float mass)
     return temp;
 }
 
+void update()
+{
+    for(long long i=0;i<bodies.size();i++)
+    {
+        //some conditions missing
 
+        bodies[i]->velX+=bodies[i]->forceX/bodies[i]->mass;
+        bodies[i]->velY+=bodies[i]->forceY/bodies[i]->mass;
+
+        bodies[i]->posX+=bodies[i]->velX;
+        bodies[i]->posY+=bodies[i]->velY;
+
+    }
+
+}
