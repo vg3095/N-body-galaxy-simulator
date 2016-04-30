@@ -6,9 +6,6 @@
 #define PI 3.14
 #define G 0.1 //doubt units and orbital velocity
 using namespace std;
-void generateParticles();
-Body* createBody(float posX,float posY,float velX,float velY,float mass);
-void central_force();
 struct Body
 {
     float posX,posY;
@@ -16,12 +13,131 @@ struct Body
     double forceX, forceY;
     float mass;
 };
+void generateParticles();
+void force_calculate(Body* o1,Body* o2);
+Body* createBody(float posX,float posY,float velX,float velY,float mass);
+void central_force();
 
 class Node
 {
 public:
     vector<Body*> bodies;
     vector<Node*> child;
+    bool hasChild = false; //usage don`t know
+    float posX,posY,width,height,total_mass;
+    float centerOfMass_x,centerOfMass_y;
+    long long depth;
+    Node(long long depth)
+    {
+        depth=depth;
+
+    }
+    void reset()
+    {
+        bodies.clear();
+
+        for(long long i=0;i<child.size();i++)
+        {
+            child[i]->reset();
+            delete child[i];
+
+        }
+        child.clear();
+
+        hasChild=false;
+
+    }
+
+    void setParamaters(vector<Body*> bodies;float width,float height,float posX=0,float posY=0)
+    {
+        //confusing parameters
+        bodies=bodies;
+        posX=posX;
+        posY=posY;
+        width=width;
+        height=height;
+
+        float mass=0;
+        double center_x=0;
+        double center_y=0;
+
+        for(long long i=0;i<bodies.size();i++)
+        {
+            mass+=bodies[i]->mass;
+            center_x+=bodies[i]->posX;
+            center_y+=bodies[i]->posY;
+
+        }
+
+        total_mass=mass;
+
+        centerOfMass_x=center_x/bodies.size();
+        centerOfMass_y=center_y/bodies.size();
+
+        if(bodies.size()>1 && depth< MAX_DEPTH)  //condition missing
+        {
+            create_children();
+
+        }
+    }
+
+    void creat_children()
+    {
+        vector<Body*> q1,q2,q3,q4;
+
+        for(int i=0;i<bodies.size();i++)
+        {
+
+            //I wrote something different
+            if(bodies[i]->posX <(posX+(width/2)))
+            {
+                if(bodies[i]->posY <(posY+(height/2)))
+                {
+                    //quadrant 1
+                    q1.push_back(bodies[i]);
+                }
+                else
+                {
+                    //quadrant 3
+                    q3.push_back(bodies[i]);
+
+                }
+
+            }
+            else{
+               if(bodies[i]->posY < (posY+(height/2)) )
+               {
+                   //quadrant 2
+                   q2.push_back(bodies[i]);
+
+               }
+               else
+               {
+                   //quadrant 4
+                   q4.push_back(bodies[i]);
+               }
+
+            }
+        }
+
+        Node* c1=new Node(depth+1);
+        Node* c2=new Node(depth+1);
+        Node* c3=new Node(depth+1);
+        Node* c4=new Node(depth+1);
+
+        c1->setParamaters(q1,width/2,height/2,posX,posY);
+        c2->setParamaters(q1,width/2,height/2,posX+width/2,posY);
+        c2->setParamaters(q1,width/2,height/2,posX,posY+height/2);
+        c2->setParamaters(q1,width/2,height/2,posX+width/2,posY+height/2);
+
+        child.push_back(c1);
+        child.push_back(c2);
+        child.push_back(c3);
+        child.push_back(c4);
+        hasChild=true;
+    }
+
+
 };
 
 vector<Body*> bodies;
