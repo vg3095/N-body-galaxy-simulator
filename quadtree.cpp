@@ -18,6 +18,7 @@ struct Body
 };
 void generateParticles();
 void draw_nodes();
+void update();
 void manage_view();
 void SetView(sf::View* pView, sf::RenderWindow* pTarget, float pViewWidth, float pViewHeight);
 void force_calculate(Body* o1,Body* o2);
@@ -158,17 +159,19 @@ float height_window_sim=327680;
 float width_window_sim=327680;
 float view_width=1920;
 float view_height=1080;
-sf::RenderWindow window(sf::VideoMode(1920, 1080), "N-Body simulation");
+sf::RenderWindow window(sf::VideoMode(1920, 1080), "N-Body simulation",sf::Style::Default);
 sf::View SimulationView;
 
 int main()
 {
     generateParticles();
+
     SetView(&SimulationView, &window, view_width, view_height);
    // run the program as long as the window is open
     while (window.isOpen())
     {
         manage_view();
+        update();
          draw_nodes();
     }
 
@@ -177,22 +180,22 @@ int main()
 
 void generateParticles()
 {
-    srand(time(NULL));
+    srand(time(0));
 
     for(long long i=0;i<totalParticles;i++)
     {
-        float angle = (rand()/RAND_MAX*1.0)*2*PI;
-        float coefficient= (rand()/RAND_MAX*1.0);
-        float distance = min_distance + (max_distance-min_distance)*coefficient;
+        float angle = (rand()/(RAND_MAX*1.0))*2*PI;
+        float coefficient= (rand()/(RAND_MAX*1.0));
+        float distance = min_distance + (max_distance-min_distance)*(coefficient*coefficient);
 
-        float posX=sin(angle)*distance ; // check pwidth/2
-        float posY=cos(angle)*distance ; // check pheight/2
+        float posX=sin(angle)*distance + width_window_sim/2 ; // check pwidth/2
+        float posY=cos(angle)*distance + height_window_sim/2 ; // check pheight/2
 
         float orbitalVel= sqrt((galaxy_mass*G)/distance);
         float velX=sin(angle)*orbitalVel ;
         float velY=cos(angle)*orbitalVel ;
         float mass = min_mass + (max_mass-min_mass)*coefficient;
-
+        cout<<posX<<" "<<posY<<" "<<distance<<endl;
         bodies.push_back(createBody(posX,posY,velX,velY,mass));
     }
 
@@ -264,12 +267,13 @@ void draw_nodes()
     {
         if(zoom>1)
             temp.setSize(sf::Vector2f(bodies[i]->mass*zoom,bodies[i]->mass*zoom));
-        temp.setSize(sf::Vector2f(bodies[i]->mass,bodies[i]->mass));
+        else
+            temp.setSize(sf::Vector2f(bodies[i]->mass,bodies[i]->mass));
 
         //stuff missing
         //zoom capabilities
 
-        temp.setFillColor(sf::Color(255,255*0,255*0));
+        temp.setFillColor(sf::Color(255,255,255));
         temp.setPosition(bodies[i]->posX,bodies[i]->posY);
         window.draw(temp);
 
