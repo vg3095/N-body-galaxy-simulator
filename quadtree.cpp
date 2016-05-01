@@ -5,6 +5,7 @@
 #include<ctime>
 #define PI 3.14
 #define G 0.1 //doubt units and orbital velocity
+#define MAX_DEPTH 100
 using namespace std;
 struct Body
 {
@@ -23,7 +24,7 @@ class Node
 public:
     vector<Body*> bodies;
     vector<Node*> child;
-    bool hasChild = false; //usage don`t know
+//    bool hasChild = false; //usage don`t know
     float posX,posY,width,height,total_mass;
     float centerOfMass_x,centerOfMass_y;
     long long depth;
@@ -44,18 +45,18 @@ public:
         }
         child.clear();
 
-        hasChild=false;
+//        hasChild=false;
 
     }
 
-    void setParamaters(vector<Body*> bodies;float width,float height,float posX=0,float posY=0)
+    void setParamaters(vector<Body*> bodies1,float width1,float height1,float posX1=0,float posY1=0)
     {
         //confusing parameters
-        bodies=bodies;
-        posX=posX;
-        posY=posY;
-        width=width;
-        height=height;
+        bodies=bodies1;
+        posX=posX1;
+        posY=posY1;
+        width=width1;
+        height=height1;
 
         float mass=0;
         double center_x=0;
@@ -81,8 +82,10 @@ public:
         }
     }
 
-    void creat_children()
+    void create_children()
     {
+
+        //check logic can`t understand
         vector<Body*> q1,q2,q3,q4;
 
         for(int i=0;i<bodies.size();i++)
@@ -134,7 +137,7 @@ public:
         child.push_back(c2);
         child.push_back(c3);
         child.push_back(c4);
-        hasChild=true;
+//        hasChild=true;
     }
 
 
