@@ -1,3 +1,4 @@
+#include <SFML\Graphics.hpp>
 #include<iostream>
 #include<vector>
 #include<cmath>
@@ -7,6 +8,7 @@
 #define G 0.1 //doubt units and orbital velocity
 #define MAX_DEPTH 100
 using namespace std;
+sf::Color default_color(255,255,255,128);
 struct Body
 {
     float posX,posY;
@@ -15,10 +17,13 @@ struct Body
     float mass;
 };
 void generateParticles();
+void draw_nodes();
+void manage_view();
+void SetView(sf::View* pView, sf::RenderWindow* pTarget, float pViewWidth, float pViewHeight);
 void force_calculate(Body* o1,Body* o2);
 Body* createBody(float posX,float posY,float velX,float velY,float mass);
 void central_force();
-
+float zoom=1;
 class Node
 {
 public:
@@ -142,7 +147,6 @@ public:
 
 
 };
-
 vector<Body*> bodies;
 float min_distance= 50;
 float max_distance= 20000;
@@ -152,9 +156,22 @@ float min_mass =1;
 float max_mass =2;
 float height_window_sim=327680;
 float width_window_sim=327680;
+float view_width=1920;
+float view_height=1080;
+sf::RenderWindow window(sf::VideoMode(1920, 1080), "N-Body simulation");
+sf::View SimulationView;
+
 int main()
 {
     generateParticles();
+    SetView(&SimulationView, &window, view_width, view_height);
+   // run the program as long as the window is open
+    while (window.isOpen())
+    {
+        manage_view();
+         draw_nodes();
+    }
+
 
 }
 
@@ -234,4 +251,66 @@ void update()
 
     }
 
+}
+
+void draw_nodes()
+{
+    window.clear();
+
+    sf::RectangleShape temp;
+    temp.setFillColor(default_color);
+
+    for(long long i=0;i<bodies.size();i++)
+    {
+        if(zoom>1)
+            temp.setSize(sf::Vector2f(bodies[i]->mass*zoom,bodies[i]->mass*zoom));
+        temp.setSize(sf::Vector2f(bodies[i]->mass,bodies[i]->mass));
+
+        //stuff missing
+        //zoom capabilities
+
+        temp.setFillColor(sf::Color(255,255*0,255*0));
+        temp.setPosition(bodies[i]->posX,bodies[i]->posY);
+        window.draw(temp);
+
+    }
+        window.display();
+}
+
+void manage_view()
+{
+    sf::Event event;
+
+    while(window.pollEvent(event))
+    {
+
+        if(event.type==sf::Event::Closed)
+            window.close();
+        if(event.type==sf::Event::MouseWheelMoved)
+        {
+            zoom*=1+(float)(-event.mouseWheel.delta)/10;
+            SimulationView.zoom(1+(float)(-event.mouseWheel.delta)/10);
+        }
+    }
+
+    if (sf::Mouse::getPosition().x > (1920 - 20))
+        SimulationView.move(2 * zoom, 0);
+    if (sf::Mouse::getPosition().x < (0 + 20))
+        SimulationView.move(-2 * zoom, 0);
+    if (sf::Mouse::getPosition().y > (1080 - 20))
+        SimulationView.move(0, 2 * zoom);
+    if (sf::Mouse::getPosition().y < (0 + 20))
+        SimulationView.move(0, -2 * zoom);
+
+    window.setView(SimulationView);
+
+
+}
+
+
+void SetView(sf::View* pView, sf::RenderWindow* pTarget, float pViewWidth, float pViewHeight)
+{
+    pView->reset(sf::FloatRect(width_window_sim / 2 - pViewWidth / 2, height_window_sim / 2 - pViewHeight / 2, pViewWidth, pViewHeight));
+    pView->setViewport(sf::FloatRect(0.f, 0.f, 1.f, 1.f));
+    pTarget->setView(*pView);
 }
