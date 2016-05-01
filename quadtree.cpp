@@ -18,6 +18,7 @@ struct Body
 };
 void generateParticles();
 void draw_nodes();
+void reset_bodies();
 void update();
 void manage_view();
 void SetView(sf::View* pView, sf::RenderWindow* pTarget, float pViewWidth, float pViewHeight);
@@ -152,14 +153,14 @@ vector<Body*> bodies;
 float min_distance= 50;
 float max_distance= 20000;
 float galaxy_mass = 100000;
-long long totalParticles =1000;
+long long totalParticles =10000;
 float min_mass =1;
 float max_mass =2;
 float height_window_sim=327680;
 float width_window_sim=327680;
 float view_width=1920;
 float view_height=1080;
-sf::RenderWindow window(sf::VideoMode(1920, 1080), "N-Body simulation",sf::Style::Default);
+sf::RenderWindow window(sf::VideoMode(1920, 1080), "N-Body simulation",sf::Style::Titlebar);
 sf::View SimulationView;
 
 int main()
@@ -171,8 +172,10 @@ int main()
     while (window.isOpen())
     {
         manage_view();
+        //central_force();
         update();
-         draw_nodes();
+        reset_bodies();
+        draw_nodes();
     }
 
 
@@ -225,6 +228,15 @@ void force_calculate(Body* o1,Body* o2)
 
 }
 
+void reset_bodies()
+{
+    for(long long i=0;i<bodies.size();i++)
+    {
+        bodies[i]->forceX=0;
+        bodies[i]->forceY=0;
+    }
+
+}
 
 Body* createBody(float posX,float posY,float velX,float velY,float mass)
 {
