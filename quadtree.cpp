@@ -5,7 +5,7 @@
 #include<cstdlib>
 #include<ctime>
 #define PI 3.14
-#define G 0.1 //doubt units and orbital velocity
+#define G 0.1
 #define MAX_LEVEL 100
 using namespace std;
 sf::Color default_color(255,255,255,128);
@@ -168,9 +168,9 @@ int main()
         central_force();
         update();
         reset_bodies();
-        //QhNode.reset();
-        //QhNode.setParamaters(bodies,width_window_sim,height_window_sim);
-        //force_barnes();
+        QhNode.reset();
+        QhNode.setParamaters(bodies,width_window_sim,height_window_sim);
+        force_barnes();
         draw_nodes();
     }
 
