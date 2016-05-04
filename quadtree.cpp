@@ -6,7 +6,7 @@
 #include<ctime>
 #define PI 3.14
 #define G 0.1 //doubt units and orbital velocity
-#define MAX_DEPTH 100
+#define MAX_LEVEL 100
 using namespace std;
 sf::Color default_color(255,255,255,128);
 struct Body
@@ -26,19 +26,22 @@ void force_calculate(Body* o1,Body* o2);
 Body* createBody(float posX,float posY,float velX,float velY,float mass);
 void central_force();
 float zoom=1;
-class Node
+class QuadTreeNode
 {
 public:
     vector<Body*> bodies;
-    vector<Node*> child;
-//    bool hasChild = false; //usage don`t know
+    vector<QuadTreeNode*> child;
+    bool hasChild; //usage don`t know
     float posX,posY,width,height,total_mass;
-    float centerOfMass_x,centerOfMass_y;
+    float COM_x,COM_y;
     long long depth;
-    Node(long long depth)
+    QuadTreeNode()
     {
-        depth=depth;
-
+        depth=0;
+    }
+    QuadTreeNode(int depth_1)
+    {
+        depth=depth_1;
     }
     void reset()
     {
@@ -79,10 +82,10 @@ public:
 
         total_mass=mass;
 
-        centerOfMass_x=center_x/bodies.size();
-        centerOfMass_y=center_y/bodies.size();
+        COM_x=center_x/bodies.size();
+        COM_y=center_y/bodies.size();
 
-        if(bodies.size()>1 && depth< MAX_DEPTH)  //condition missing
+        if(bodies.size()>1 && depth< MAX_LEVEL)  //condition missing
         {
             create_children();
 
@@ -94,46 +97,32 @@ public:
 
         //check logic can`t understand
         vector<Body*> q1,q2,q3,q4;
-
+        float x_mid,y_mid;
+        x_mid=width/2;
+        y_mid=height/2;
         for(int i=0;i<bodies.size();i++)
         {
-
-            //I wrote something different
-            if(bodies[i]->posX <(posX+(width/2)))
+            if(bodies[i]->posX >posX+x_mid)
             {
-                if(bodies[i]->posY <(posY+(height/2)))
-                {
-                    //quadrant 1
+                if(bodies[i]->posY>posY+y_mid)
                     q1.push_back(bodies[i]);
-                }
                 else
-                {
-                    //quadrant 3
-                    q3.push_back(bodies[i]);
-
-                }
-
+                    q4.push_back(bodies[i]);
             }
-            else{
-               if(bodies[i]->posY < (posY+(height/2)) )
-               {
-                   //quadrant 2
-                   q2.push_back(bodies[i]);
-
-               }
-               else
-               {
-                   //quadrant 4
-                   q4.push_back(bodies[i]);
-               }
-
+            else
+            {
+                if(bodies[i]->posY>posY+y_mid)
+                    q2.push_back(bodies[i]);
+                else
+                    q3.push_back(bodies[i]);
             }
         }
 
-        Node* c1=new Node(depth+1);
-        Node* c2=new Node(depth+1);
-        Node* c3=new Node(depth+1);
-        Node* c4=new Node(depth+1);
+        QuadTreeNode* c1=new QuadTreeNode(depth+1);
+        QuadTreeNode* c2=new QuadTreeNode(depth+1);
+        QuadTreeNode* c3=new QuadTreeNode(depth+1);
+        QuadTreeNode* c4=new QuadTreeNode(depth+1);
+
 
         c1->setParamaters(q1,width/2,height/2,posX,posY);
         c2->setParamaters(q1,width/2,height/2,posX+width/2,posY);
@@ -144,16 +133,17 @@ public:
         child.push_back(c2);
         child.push_back(c3);
         child.push_back(c4);
-//        hasChild=true;
+        hasChild=true;
     }
 
 
 };
+void force_barnes();
 vector<Body*> bodies;
 float min_distance= 50;
 float max_distance= 20000;
 float galaxy_mass = 100000;
-long long totalParticles =10000;
+long long totalParticles =1000;
 float min_mass =1;
 float max_mass =2;
 float height_window_sim=327680;
@@ -162,7 +152,7 @@ float view_width=1920;
 float view_height=1080;
 sf::RenderWindow window(sf::VideoMode(1920, 1080), "N-Body simulation",sf::Style::Titlebar);
 sf::View SimulationView;
-
+QuadTreeNode QhNode;
 int main()
 {
     generateParticles();
@@ -175,6 +165,9 @@ int main()
         //central_force();
         update();
         reset_bodies();
+        //QhNode.reset();
+        //QhNode.setParamaters(bodies,width_window_sim,height_window_sim);
+        force_barnes();
         draw_nodes();
     }
 
@@ -330,3 +323,50 @@ void SetView(sf::View* pView, sf::RenderWindow* pTarget, float pViewWidth, float
     pView->setViewport(sf::FloatRect(0.f, 0.f, 1.f, 1.f));
     pTarget->setView(*pView);
 }
+
+
+
+void force_group_node(QuadTreeNode* N,Body* body)
+{
+
+    float v_x=N->COM_x-body->posX;
+    float v_y=N->COM_y-body->posY;
+
+    float dis_sqr= v_x*v_x +v_y*v_y;
+    double force = (N->total_mass * body->mass * G)/(dis_sqr);
+
+    body->forceX+=(body->posX-body->posX)*force;
+    body->forceY+=(body->posY-body->posY)*force;
+
+
+}
+
+
+
+
+void group_node_check(QuadTreeNode* N,Body* body)
+{
+    if(N->bodies.size()!=0)
+    {
+        float dX=N->COM_x-body->posX;
+        float dY=N->COM_y-body->posY;
+        float dist=sqrt((dX*dX+dY*dY));
+        float width=N->width;
+        if( ( width) /dist< (0.5) || N->hasChild==false)
+        {
+            force_group_node(N,body);
+        }
+
+    }
+}
+
+
+void force_barnes()
+{
+    for(long long i=0;i<bodies.size();i++)
+    {
+        group_node_check(&QhNode,bodies[i]);
+    }
+}
+
+
