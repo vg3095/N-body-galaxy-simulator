@@ -29,12 +29,14 @@ float zoom=1;
 class QuadTreeNode
 {
 public:
-    vector<Body*> bodies;
     vector<QuadTreeNode*> child;
-    bool hasChild; //usage don`t know
+    vector<Body*> bodies;
+
     float posX,posY,width,height,total_mass;
     float COM_x,COM_y;
     long long depth;
+    bool hasChild;
+
     QuadTreeNode()
     {
         depth=0;
@@ -55,37 +57,37 @@ public:
         }
         child.clear();
 
-//        hasChild=false;
+        hasChild=false;
 
     }
 
     void setParamaters(vector<Body*> bodies1,float width1,float height1,float posX1=0,float posY1=0)
     {
-        //confusing parameters
+        //cout<<"q"<<endl;
         bodies=bodies1;
         posX=posX1;
         posY=posY1;
         width=width1;
         height=height1;
 
-        float mass=0;
+
         double center_x=0;
         double center_y=0;
 
         for(long long i=0;i<bodies.size();i++)
         {
-            mass+=bodies[i]->mass;
-            center_x+=bodies[i]->posX;
-            center_y+=bodies[i]->posY;
+            total_mass+=bodies[i]->mass;
+            center_x+=bodies[i]->mass*bodies[i]->posX;
+            center_y+=bodies[i]->mass*bodies[i]->posY;
 
         }
 
-        total_mass=mass;
 
-        COM_x=center_x/bodies.size();
-        COM_y=center_y/bodies.size();
 
-        if(bodies.size()>1 && depth< MAX_LEVEL)  //condition missing
+        COM_x=1.0*(center_x/total_mass);
+        COM_y=1.0*(center_y/total_mass);
+
+        if(bodies.size()>1 && depth< MAX_LEVEL)
         {
             create_children();
 
@@ -95,11 +97,12 @@ public:
     void create_children()
     {
 
-        //check logic can`t understand
+
         vector<Body*> q1,q2,q3,q4;
         float x_mid,y_mid;
         x_mid=width/2;
         y_mid=height/2;
+
         for(int i=0;i<bodies.size();i++)
         {
             if(bodies[i]->posX >posX+x_mid)
@@ -125,9 +128,9 @@ public:
 
 
         c1->setParamaters(q1,width/2,height/2,posX,posY);
-        c2->setParamaters(q1,width/2,height/2,posX+width/2,posY);
-        c2->setParamaters(q1,width/2,height/2,posX,posY+height/2);
-        c2->setParamaters(q1,width/2,height/2,posX+width/2,posY+height/2);
+        c2->setParamaters(q2,width/2,height/2,posX+width/2,posY);
+        c2->setParamaters(q3,width/2,height/2,posX,posY+height/2);
+        c2->setParamaters(q4,width/2,height/2,posX+width/2,posY+height/2);
 
         child.push_back(c1);
         child.push_back(c2);
@@ -162,12 +165,12 @@ int main()
     while (window.isOpen())
     {
         manage_view();
-        //central_force();
+        central_force();
         update();
         reset_bodies();
         //QhNode.reset();
         //QhNode.setParamaters(bodies,width_window_sim,height_window_sim);
-        force_barnes();
+        //force_barnes();
         draw_nodes();
     }
 
@@ -184,14 +187,14 @@ void generateParticles()
         float coefficient= (rand()/(RAND_MAX*1.0));
         float distance = min_distance + (max_distance-min_distance)*(coefficient*coefficient);
 
-        float posX=sin(angle)*distance + width_window_sim/2 ; // check pwidth/2
-        float posY=cos(angle)*distance + height_window_sim/2 ; // check pheight/2
+        float posX=cos(angle)*distance + width_window_sim/2 ; // check pwidth/2
+        float posY=sin(angle)*distance + height_window_sim/2 ; // check pheight/2
 
-        float orbitalVel= sqrt((galaxy_mass*G)/distance);
-        float velX=sin(angle)*orbitalVel ;
-        float velY=cos(angle)*orbitalVel ;
-        float mass = min_mass + (max_mass-min_mass)*coefficient;
-        cout<<posX<<" "<<posY<<" "<<distance<<endl;
+        float orbitalVel= sqrt(1.0*(galaxy_mass*G)/distance);
+        float velX=sin(angle)*orbitalVel*1.0 ;
+        float velY=-cos(angle)*orbitalVel*1.0 ;
+        float mass = min_mass + rand()%(int)(max_mass-min_mass);
+        //cout<<posX<<" "<<posY<<" "<<distance<<endl;
         bodies.push_back(createBody(posX,posY,velX,velY,mass));
     }
 
@@ -199,24 +202,48 @@ void generateParticles()
 
 void central_force() //force b/w center and object
 {
+
 Body* temp = createBody(width_window_sim/2,height_window_sim/2,0,0,galaxy_mass);
 
 for(long long i=0;i<bodies.size();i++)
 {
-
     force_calculate(bodies[i],temp);
 }
+
+delete temp;
+
 }
 
-void force_calculate(Body* o1,Body* o2)
+void force_calculate(Body* bi,Body* bj)
 {
-    float dis_sqr= pow((o2->posX-o1->posX),2)+pow((o2->posY-o1->posY),2);
+    /**
+    float v_x=o2->posX-o1->posX;
+    float v_y=o2->posY-o1->posY;
+    float dis_sqr= v_x*v_x + v_y*v_y;
+    float dis_cube_sqr=dis_sqr*dis_sqr*dis_sqr;
+    float dis= 1.0f/sqrt(dis_cube_sqr);
+    double force = 1.0f*(o1->mass*o2->mass*G*dis);
 
-    double force = (o1->mass*o2->mass*G)/(dis_sqr);
+    o1->forceX+=v_x*force;
+    o1->forceY+=v_y*force;
+    */
 
-    o1->forceX+=(o2->posX-o1->posX)*force;
-    o1->forceY+=(o2->posY-o1->posY)*force;
+    //std::vector from i to j
+    float vectorx = bj->posX - bi->posX;
+    float vectory = bj->posY - bi->posY;
 
+    //c^2 = a^2 + b^2 + softener^2
+    float distSqr = vectorx * vectorx + vectory * vectory;
+
+    // ivnDistCube = 1/distSqr^(3/2)
+    float distSixth = distSqr * distSqr * distSqr;
+    double invDistCube = 1.0f / (sqrt(distSixth));
+
+
+    double force = (bj->mass * bi->mass * invDistCube * 0.1);
+
+    bi->forceX += vectorx * force;
+    bi->forceY += vectory * force;
 
 
 }
@@ -249,7 +276,15 @@ void update()
 {
     for(long long i=0;i<bodies.size();i++)
     {
-        //some conditions missing
+       /** if(bodies[i]->posX>width_window_sim && bodies[i]->velX > 0 || bodies[i]->posX<width_window_sim && bodies[i]->velX < 0)
+        {
+            bodies[i]->velX=-bodies[i]->velX;
+        }
+
+        if(bodies[i]->posY>height_window_sim && bodies[i]->velY > 0 || bodies[i]->posY<height_window_sim && bodies[i]->velY < 0)
+        {
+            bodies[i]->velY=-bodies[i]->velY;
+        } */
 
         bodies[i]->velX+=bodies[i]->forceX/bodies[i]->mass;
         bodies[i]->velY+=bodies[i]->forceY/bodies[i]->mass;
@@ -333,7 +368,8 @@ void force_group_node(QuadTreeNode* N,Body* body)
     float v_y=N->COM_y-body->posY;
 
     float dis_sqr= v_x*v_x +v_y*v_y;
-    double force = (N->total_mass * body->mass * G)/(dis_sqr);
+    float dis=1.0f/sqrt(pow(dis_sqr,3));
+    double force = (N->total_mass * body->mass *dis* G);
 
     body->forceX+=(body->posX-body->posX)*force;
     body->forceY+=(body->posY-body->posY)*force;
@@ -355,6 +391,13 @@ void group_node_check(QuadTreeNode* N,Body* body)
         if( ( width) /dist< (0.5) || N->hasChild==false)
         {
             force_group_node(N,body);
+        }
+        else
+        {
+            group_node_check(N->child[0],body);
+            group_node_check(N->child[1],body);
+            group_node_check(N->child[2],body);
+            group_node_check(N->child[3],body);
         }
 
     }
